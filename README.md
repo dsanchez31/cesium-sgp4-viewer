@@ -8,7 +8,7 @@
 
 Show a whole satellite catalog on a [CesiumJS](https://cesium.com/platform/cesiumjs/) globe, from a list of TLEs: every object at its SGP4 position, its orbit, its name, following the scene's clock. SGP4 runs in web workers, and orbits are drawn by custom vertex and fragment shaders straight from GPU buffers, which keeps tens of thousands of objects smooth.
 
-**[Live demo](https://dsanchez31.github.io/cesium-sgp4-viewer/)**: a CelesTrak catalog snapshot (about 16,000 objects), in a [vanilla TypeScript](examples/vanilla) and a [React](examples/react) version.
+**[Live demo](https://dsanchez31.github.io/cesium-sgp4-viewer/)**: a CelesTrak catalog snapshot (about 16,000 objects), in a [vanilla TypeScript](examples/vanilla) and a [React](examples/react) version. Also runnable in **[Sandcastle][sandcastle-demo]**, CesiumJS's online playground.
 
 ```ts
 const { satellites } = parseTleCatalog(await (await fetch('/tle.txt')).text());
@@ -195,7 +195,9 @@ pnpm --filter example-react dev     # React
 
 Both examples load [`examples/data/tle.txt`](examples/data/tle.txt) and provide 3D and 2D views, orbits, labels, day/night lighting, selection with a details panel, a regime filter, search by name or NORAD ID, a timeline you can drag and zoom, speed and direction controls, a live mode, and loading your own TLE file.
 
-[`examples/sandcastle`](examples/sandcastle) runs the library in [Sandcastle](https://sandcastle.cesium.com), CesiumJS's online playground.
+[`examples/sandcastle`](examples/sandcastle) runs the library in [Sandcastle](https://sandcastle.cesium.com), CesiumJS's online playground: **[open the demo][sandcastle-demo]**.
+
+[sandcastle-demo]: https://sandcastle.cesium.com/#c=lVZ/b9s2EP0qh6CAKMylkrUYhjTqmrhu6835gTjtUDRFTVNniw1FaiTlxE393QeKkiO7SZH+EQc6Pr57d+Q9KUmAoxVV8dTOy+dPFwKv0YBQMGYq48w6ifRSJYn/gzNmHYLLhYWZkAhCOQ0uR/ibLdiYG1E6KJlCCXoGuXOl3U8Se0cUMlGui5oTLnIEKaaGmWVkYTh8M4BpJWQGBllmoV/DYWZ0UWcp2RwjC3Opp0zCJCxPemA1CFcTVhZtDV2gWYJQ1jHFsVMLMOm5lyA1yzCjl+pSca2sg9Hw6Pzw/OOXD4Pz8fD0BFKIduke3Y1ebCPen48ghUlbH88U/WozlGJhqEKXqLJIXmWWKZ7jt2d7yY/9ffXkdivdKsmEdfdAqRAzpF/tZC3jYjQIEi4VQPSginme/FxDwYRK8IYVpUSbZMyxxJ+Ru3G+5Dab71NzsikQa3gM6UufWeE1nBldCIuEGLRaLrAHBr8idx4Dtx4FEGhsS5FpXhWoHOUGmcOBRP9EogCI4hdhV3ik1nBIwRq+GdbKy4IUmrzbq2iMNl5vLSRoIl7wwC+QSV9XMgOlQ3nw5NYavprEbfK1xhxZRllZospIIA+QVdzpUDMyad2RcCfphzpGotD2vlaOCYUm6oWuMCUK5oRW++BMhT0fc6JAKRR2QlNmccSWaM4Ev0KzDzMmbViao+Y624wJNdNH+qYbsiiR+0RDlQnOnO5sqItoLhmXml+F37HDEtK2kH4bouOP44vB8Zf+6LT/z5fj96OL4dloODjf5igq6UQpRd2RP3a3l23uW39Y14+Q1rXWvSTMLhVvTiw06ZqJ7v0jnfkLxxD6fwslMxYvJPaZY1LPezBmDqUULnSvB6jYVOJQoXGCyT4r0DBYQQrXQmX6moZix/PyeTi4WlHL7/DGX9wgh4R/M3Q8J80kxjH1GLIpyrYabJ1pSyPxO7obpFfaXKJN+SQ0sLfB2QPJpijtPkS5XqCJwp2Ee0ttGKjlqDBuiksSGCMzPIfpEhQrELSBk9Pzw9cwfE3vhNkAenhyhSqrdnADmLpl6Q83Co9Rd6mUjGOuZVZXG51sJd7AsiwbLFC5kbAOlZ+nkKvXvSatzv8qb/lpu3fBZIXUGVGQmDo90tdo+swiaYe8bji16N4I6dCQEIWWJ00hitoYwF+gKinvnveB2FqDpUoblg0zah0zzv4rXE5qjhi+f/fLrMBNAVQoLqsMbYPrBdqOtXQsaI6u6fTRcpiRyGktp8xE8dqX6nrbU+28tVmWXej5XOJR5ZxWJDo1U+Fs1GscAAjPkV9h1u1l6IqukZBCg+gq285QyzlGVZFPgeK2nph9iA6lBINzUaBPqlUwo/3m8Nb9Pw8Q4hscw6q3xTIanD5m96ca+PkeguPHEhw/QPD2sQRvHyB491iCd12Cz7/a71HtCKAVBEv4MSUJOYN1+PELwHsk+7MLsMfQMCnvIznRv8ChtMLoMbW31/nZ67URdP2NFtqU+YV+9prs0j/jRxD9/nOi3++IPFUzIYpEoSC/d+3L3VESs42F29Y8vF1pidS/Be4MZfLkdg2uPWMFZCMUXGYV96AbDvO16sEEfrsjA5iUaITONrAYfMTSsHYsVOXQUqffiBvMyF68gkKoSa/laZ1ytZ7+VUxiypl/95H6G6uuty2ojjTx+MVOb+fAuqXE+mvxlShKbRxURhJKE4dFKZlDm0wrfoWOcmt9goOk3XKQiQWILL3c2fqGutwBLpm16eXOrJJyLL7h5c7LgyQTi41t/sNBqPnpAo1kSw/J916OQpBSepDke/fsauy1w/g/
 
 ## Data
 
