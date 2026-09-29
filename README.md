@@ -23,7 +23,7 @@ This library is built for that size:
 
 - **SGP4 runs in web workers.** The catalog is split across a small pool of workers (cores minus one, up to four). Each worker samples its satellites over a window of a few hours around the playhead and keeps its samples: when the window moves, only the new stretch is propagated.
 - **The main thread only interpolates.** A degree-5 Lagrange polynomial over 36 samples per revolution (more for eccentric orbits) stays close to SGP4: the unit tests bound the error at 50 m, a highly eccentric orbit included.
-- **Points are one `PointPrimitiveCollection`**, one draw call for the whole catalog, updated in place.
+- **All points are one custom primitive.** When the clock moves, the positions are written into one typed array and uploaded at once: one draw call for the whole catalog, in 3D, 2D, Columbus view and while the scene morphs.
 - **All orbits are one custom primitive.** Rings are built once per hour of simulated time, uploaded to the GPU as they come out of the workers, and turned under the Earth by one matrix per frame. In 2D, the same buffers are drawn as ground tracks, computed in the vertex shader.
 - **Filters are free.** Filtering by regime, name or anything else never propagates again: points are hidden, and the orbits' index buffer is rebuilt from per-satellite ranges.
 

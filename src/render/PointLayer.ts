@@ -1,5 +1,4 @@
 import {
-  BlendOption,
   Cartesian2,
   Cartesian3,
   type Color,
@@ -8,13 +7,14 @@ import {
   LabelCollection,
   LabelStyle,
   type NearFarScalar,
-  type PointPrimitive,
-  PointPrimitiveCollection,
   type Scene,
+  SceneMode,
   VerticalOrigin,
 } from 'cesium';
 
 import type { Satellite } from '../tle/parseCatalog.js';
+import { hidePoint, writePoint } from './pointShaders.js';
+import { type PickedPoint, PointsPrimitive } from './PointsPrimitive.js';
 import type { TrackStore } from './TrackStore.js';
 
 export interface PointStyle {
@@ -48,19 +48,24 @@ export interface LabelOptions {
 export type LabelMode = 'none' | 'hover' | 'all';
 
 const scratch = new Cartesian3();
+const labelScratch = new Cartesian3();
 
 /**
- * Every satellite as one point of a single `PointPrimitiveCollection`, moved in
- * place when the clock changes. One draw call for the whole catalog, where an
- * `Entity` per satellite would re-evaluate a property graph per frame.
+ * Every satellite as one point of a single {@link PointsPrimitive}, moved in
+ * place when the clock changes: one loop over typed arrays and one upload per
+ * frame, where an `Entity` per satellite would re-evaluate a property graph.
  */
 export class PointLayer {
   private readonly scene: Scene;
   private readonly satellites: readonly Satellite[];
   private readonly tracks: TrackStore;
   private readonly labelOptions: LabelOptions;
-  private readonly collection: PointPrimitiveCollection;
-  private readonly points: PointPrimitive[];
+  private readonly primitive: PointsPrimitive;
+  /** Earth-fixed position of each point as drawn, metres. */
+  private readonly positions: Float64Array;
+  /** 1 where the point is drawn. */
+  private readonly drawn: Uint8Array;
+  private readonly removeMorphStart: () => void;
   private visible: Uint8Array | null = null;
   private lastMs = Number.NaN;
 
@@ -82,20 +87,18 @@ export class PointLayer {
     this.satellites = satellites;
     this.tracks = tracks;
     this.labelOptions = labelOptions;
-    // Translucent: overlapping points add up to brightness, so a dense shell
-    // reads as a density rather than a flat disc.
-    this.collection = scene.primitives.add(
-      new PointPrimitiveCollection({ blendOption: BlendOption.TRANSLUCENT }),
-    ) as PointPrimitiveCollection;
-    this.points = satellites.map((satellite, i) =>
-      this.collection.add({
-        id: i,
-        show: false,
-        pixelSize: style.pixelSize,
-        color: style.colorOf(satellite),
-        scaleByDistance: style.scaleByDistance,
-        translucencyByDistance: style.translucencyByDistance,
-      }),
+    this.primitive = scene.primitives.add(
+      new PointsPrimitive(satellites.map(style.colorOf), style),
+    ) as PointsPrimitive;
+    this.positions = new Float64Array(satellites.length * 3);
+    this.drawn = new Uint8Array(satellites.length);
+    // A morph to or from 2D ends, or starts, on a flat map. Points kept at
+    // their height on the way would swell in perspective, high orbits most,
+    // then jump back onto the map when the morph completes.
+    this.removeMorphStart = scene.morphStart.addEventListener(
+      (_: unknown, from: SceneMode, to: SceneMode) => {
+        this.primitive.morphHeight = from === SceneMode.SCENE2D || to === SceneMode.SCENE2D ? 0 : 1;
+      },
     );
   }
 
@@ -134,38 +137,36 @@ export class PointLayer {
     if (ms === this.lastMs) return;
     this.lastMs = ms;
 
-    const { points, tracks, labelOf } = this;
-    for (let i = 0; i < points.length; i++) {
-      const point = points[i]!;
+    const { positions, drawn, tracks, labelOf } = this;
+    const { vertices } = this.primitive;
+    let radiusSquared = 0;
+    for (let i = 0; i < drawn.length; i++) {
       const position = this.isVisible(i) ? tracks.positionAt(i, ms, scratch) : null;
       if (position) {
-        point.position = position as Cartesian3;
-        point.show = true;
+        const { x, y, z } = position;
+        positions[i * 3] = x;
+        positions[i * 3 + 1] = y;
+        positions[i * 3 + 2] = z;
+        writePoint(vertices, i, x, y, z);
+        drawn[i] = 1;
+        radiusSquared = Math.max(radiusSquared, x * x + y * y + z * z);
       } else {
-        point.show = false;
+        hidePoint(vertices, i);
+        drawn[i] = 0;
       }
     }
+    this.primitive.markDirty(Math.sqrt(radiusSquared));
 
-    for (const [i, label] of labelOf) {
-      const point = points[i]!;
-      label.show = point.show;
-      if (point.show) label.position = point.position;
-    }
-
+    for (const [i, label] of labelOf) this.placeLabel(label, i);
     if (this.hovered !== undefined && this.hoverLabel) {
-      const point = points[this.hovered]!;
-      this.hoverLabel.show = point.show;
-      if (point.show) this.hoverLabel.position = point.position;
+      this.placeLabel(this.hoverLabel, this.hovered);
     }
   }
 
   /** Catalog index of the point drawn at `windowPosition`, if any. */
   pick(windowPosition: Cartesian2): number | undefined {
-    const picked = this.scene.pick(windowPosition) as
-      { collection?: unknown; id?: unknown } | undefined;
-    return picked?.collection === this.collection && typeof picked.id === 'number'
-      ? picked.id
-      : undefined;
+    const picked = this.scene.pick(windowPosition) as Partial<PickedPoint> | undefined;
+    return picked?.primitive === this.primitive ? picked.index : undefined;
   }
 
   /** Shows the hover label on satellite `i` (in `'hover'` mode), or hides it. */
@@ -178,26 +179,37 @@ export class PointLayer {
       label.show = false;
     } else {
       label.text = this.satellites[i]!.name;
-      const point = this.points[i]!;
-      label.show = point.show;
-      label.position = point.position;
+      this.placeLabel(label, i);
     }
     this.scene.requestRender();
   }
 
   /** Current position of satellite `i` as drawn, if it is drawn. */
-  drawnPosition(i: number): Cartesian3 | undefined {
-    const point = this.points[i];
-    return point?.show ? point.position : undefined;
+  drawnPosition(i: number, result?: Cartesian3): Cartesian3 | undefined {
+    if (this.drawn[i] !== 1) return undefined;
+    const { positions } = this;
+    return Cartesian3.fromElements(
+      positions[i * 3]!,
+      positions[i * 3 + 1]!,
+      positions[i * 3 + 2]!,
+      result,
+    );
   }
 
   destroy(): void {
+    this.removeMorphStart();
     this.disposeLabels();
-    this.scene.primitives.remove(this.collection);
+    this.scene.primitives.remove(this.primitive);
   }
 
   private isVisible(i: number): boolean {
     return this.visible === null || this.visible[i] !== 0;
+  }
+
+  private placeLabel(label: Label, i: number): void {
+    const position = this.drawnPosition(i, labelScratch);
+    label.show = position !== undefined;
+    if (position) label.position = position;
   }
 
   private labelTemplate() {

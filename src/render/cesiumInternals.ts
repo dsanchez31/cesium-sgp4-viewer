@@ -1,4 +1,4 @@
-import type { ComponentDatatype, IndexDatatype, JulianDate, SceneMode } from 'cesium';
+import type { Color, ComponentDatatype, IndexDatatype, JulianDate, SceneMode } from 'cesium';
 import * as Cesium from 'cesium';
 
 /*
@@ -15,13 +15,14 @@ export interface Destroyable {
 export interface GpuBuffer extends Destroyable {
   /** When `true` (the default), destroying a vertex array destroys this buffer too. */
   vertexArrayDestroyable: boolean;
+  copyFromArrayView(arrayView: ArrayBufferView, offsetInBytes?: number): void;
 }
 
 export interface CesiumInternals {
   Buffer: {
     createVertexBuffer(options: {
       context: unknown;
-      typedArray: Float32Array;
+      typedArray: Float32Array | Uint8Array;
       usage: unknown;
     }): GpuBuffer;
     createIndexBuffer(options: {
@@ -31,7 +32,7 @@ export interface CesiumInternals {
       indexDatatype: IndexDatatype;
     }): GpuBuffer;
   };
-  BufferUsage: { STATIC_DRAW: unknown };
+  BufferUsage: { STATIC_DRAW: unknown; DYNAMIC_DRAW: unknown };
   VertexArray: new (options: {
     context: unknown;
     attributes: readonly {
@@ -39,10 +40,11 @@ export interface CesiumInternals {
       vertexBuffer: GpuBuffer;
       componentsPerAttribute: number;
       componentDatatype: ComponentDatatype;
+      normalize?: boolean;
       offsetInBytes: number;
       strideInBytes: number;
     }[];
-    indexBuffer: GpuBuffer;
+    indexBuffer?: GpuBuffer;
   }) => Destroyable;
   ShaderProgram: {
     fromCache(options: {
@@ -62,8 +64,13 @@ export interface FrameState {
   context: unknown;
   mode: SceneMode;
   time: JulianDate;
-  passes: { render: boolean };
+  passes: { render: boolean; pick: boolean };
   commandList: unknown[];
+}
+
+/** What `context.createPickId` returns: `scene.pick` answers with `object`. */
+export interface PickId extends Destroyable {
+  color: Color;
 }
 
 const REQUIRED = [

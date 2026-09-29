@@ -12,6 +12,29 @@ import { EARTH_ROTATION_RATE } from '../constants.js';
 export const ATTRIBUTE_LOCATIONS = { position: 0, timing: 1 } as const;
 
 /**
+ * Geodetic longitude, latitude (Bowring) and height above the WGS-84
+ * ellipsoid of an Earth-fixed point, in radians and metres: what Cesium's
+ * default `GeographicProjection` maps to 2D and Columbus view coordinates.
+ */
+export const GEODETIC_GLSL = /* glsl */ `
+const float WGS84_A = 6378137.0;
+const float WGS84_B = 6356752.314245179;
+const float WGS84_E2 = 6.69437999014e-3;
+const float WGS84_EP2 = 6.73949674228e-3;
+
+vec3 geodetic(vec3 p) {
+  float r = length(p.xy);
+  float beta = atan(WGS84_A * p.z, WGS84_B * r);
+  float sb = sin(beta);
+  float cb = cos(beta);
+  float lat = atan(p.z + WGS84_EP2 * WGS84_B * sb * sb * sb, r - WGS84_E2 * WGS84_A * cb * cb * cb);
+  float sl = sin(lat);
+  float height = r * cos(lat) + p.z * sl - WGS84_A * sqrt(1.0 - WGS84_E2 * sl * sl);
+  return vec3(atan(p.y, p.x), lat, height);
+}
+`;
+
+/**
  * 3D: the ring as it is, turned from TEME to the Earth-fixed frame by the
  * model matrix, which the primitive updates every frame.
  */
@@ -65,11 +88,7 @@ out float v_phase;
 out float v_phaseShifted;
 
 const float OMEGA = ${EARTH_ROTATION_RATE.toExponential(15)};
-const float A = 6378137.0;
-const float B = 6356752.314245179;
-const float E2 = 6.69437999014e-3;
-const float EP2 = 6.73949674228e-3;
-
+${GEODETIC_GLSL}
 void main() {
   float tau = timing.x;
   float period = timing.y;
@@ -80,12 +99,9 @@ void main() {
   float s = sin(theta);
   vec3 p = vec3(c * position.x + s * position.y, c * position.y - s * position.x, position.z);
 
-  float lon = atan(p.y, p.x);
-  float r = length(p.xy);
-  float beta = atan(A * p.z, B * r);
-  float sb = sin(beta);
-  float cb = cos(beta);
-  float lat = atan(p.z + EP2 * B * sb * sb * sb, r - E2 * A * cb * cb * cb);
+  vec3 g = geodetic(p);
+  float lon = g.x;
+  float lat = g.y;
 
   v_lon = lon;
   v_lonShifted = lon < 0.0 ? lon + czm_twoPi : lon;
@@ -93,7 +109,7 @@ void main() {
   v_phase = phase;
   v_phaseShifted = phase < 0.0 ? phase + 1.0 : phase;
 
-  gl_Position = czm_modelViewProjection * vec4(0.0, lon * A, lat * A, 1.0);
+  gl_Position = czm_modelViewProjection * vec4(0.0, lon * WGS84_A, lat * WGS84_A, 1.0);
 }
 `;
 
