@@ -4,7 +4,7 @@
 // The library's IIFE build reads Cesium from the page's global `Cesium`, so it
 // uses the very instance Sandcastle already loaded.
 
-const LIBRARY_VERSION = '0.1.0';
+const LIBRARY_VERSION = 'latest';
 const LIBRARY_URL = `https://cdn.jsdelivr.net/npm/@dsanchez31/cesium-sgp4-viewer@${LIBRARY_VERSION}/dist/cesium-sgp4-viewer.iife.js`;
 const TLE_URL =
   'https://cdn.jsdelivr.net/gh/dsanchez31/cesium-sgp4-viewer@main/examples/data/tle.txt';
@@ -19,8 +19,8 @@ const loadScript = (src) =>
   });
 
 const viewer = new Cesium.Viewer('cesiumContainer', {
-  animation: false,
-  timeline: false,
+  animation: true,
+  timeline: true,
   baseLayerPicker: false,
   geocoder: false,
   infoBox: false,
@@ -29,6 +29,7 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
 viewer.clock.clockStep = Cesium.ClockStep.SYSTEM_CLOCK_MULTIPLIER;
 viewer.clock.multiplier = 60;
 viewer.clock.shouldAnimate = true;
+viewer.scene.debugShowFramesPerSecond = true;
 
 (async () => {
   await loadScript(LIBRARY_URL);

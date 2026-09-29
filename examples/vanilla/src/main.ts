@@ -11,7 +11,7 @@ import { Cartographic } from 'cesium';
 
 import { onClockTick, readClock, scrubTo } from '../../shared/clock';
 import { searchPredicate } from '../../shared/format';
-import { createViewer, setLighting } from '../../shared/viewer';
+import { createViewer, setFramesPerSecond, setLighting } from '../../shared/viewer';
 import { mountDetails } from './ui/details';
 import { byId } from './ui/dom';
 import { mountRegimes } from './ui/regimes';
@@ -107,6 +107,13 @@ lighting.addEventListener('click', () => {
   const isLit = lighting.getAttribute('aria-pressed') !== 'true';
   setLighting(viewer, isLit);
   lighting.setAttribute('aria-pressed', String(isLit));
+});
+
+const fps = byId('fps', HTMLButtonElement);
+fps.addEventListener('click', () => {
+  const isShown = fps.getAttribute('aria-pressed') !== 'true';
+  setFramesPerSecond(viewer, isShown);
+  fps.setAttribute('aria-pressed', String(isShown));
 });
 
 byId('labels', HTMLSelectElement).addEventListener('change', (event) => {

@@ -46,6 +46,8 @@ export const createViewer = (container: HTMLElement): Viewer => {
 
   // The whole globe lit by default; `setLighting` turns the day/night terminator on.
   viewer.scene.globe.enableLighting = false;
+  // Frame rate overlay hidden by default; `setFramesPerSecond` shows it.
+  viewer.scene.debugShowFramesPerSecond = false;
 
   // Double-click would track an entity; this scene has none.
   viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
@@ -61,5 +63,11 @@ export const createViewer = (container: HTMLElement): Viewer => {
 /** Shows the day/night terminator, which follows the clock, or lights the whole globe. */
 export const setLighting = (viewer: Viewer, isLit: boolean): void => {
   viewer.scene.globe.enableLighting = isLit;
+  viewer.scene.requestRender();
+};
+
+/** Shows or hides Cesium's frame rate overlay. */
+export const setFramesPerSecond = (viewer: Viewer, isShown: boolean): void => {
+  viewer.scene.debugShowFramesPerSecond = isShown;
   viewer.scene.requestRender();
 };
