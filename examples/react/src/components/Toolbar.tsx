@@ -10,6 +10,8 @@ interface ToolbarProps {
   onModeChange: (is3D: boolean) => void;
   isLit: boolean;
   onLightingChange: (isLit: boolean) => void;
+  isFpsShown: boolean;
+  onFpsChange: (isFpsShown: boolean) => void;
   onFile: (file: File) => void;
   stats: string;
 }
@@ -22,6 +24,8 @@ export const Toolbar = ({
   onModeChange,
   isLit,
   onLightingChange,
+  isFpsShown,
+  onFpsChange,
   onFile,
   stats,
 }: ToolbarProps) => {
@@ -54,6 +58,9 @@ export const Toolbar = ({
       </button>
       <button type="button" aria-pressed={isLit} onClick={() => onLightingChange(!isLit)}>
         Lighting
+      </button>
+      <button type="button" aria-pressed={isFpsShown} onClick={() => onFpsChange(!isFpsShown)}>
+        FPS
       </button>
       <label className="select">
         Labels

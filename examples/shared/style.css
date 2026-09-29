@@ -159,6 +159,14 @@ input[type='search'] {
   padding: 0 7px;
 }
 
+/* Cesium's frame rate overlay, moved off the toolbar and the details panel. */
+#globe .cesium-performanceDisplay-defaultContainer {
+  top: 76px;
+  left: 12px;
+  right: auto;
+  text-align: left;
+}
+
 .transport {
   left: 12px;
   right: 12px;

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { scrubTo } from '../../shared/clock';
 import { searchPredicate } from '../../shared/format';
-import { setLighting } from '../../shared/viewer';
+import { setFramesPerSecond, setLighting } from '../../shared/viewer';
 import { Details } from './components/Details';
 import { Timeline } from './components/Timeline';
 import { Toolbar } from './components/Toolbar';
@@ -34,6 +34,7 @@ export const App = () => {
   const [settings, setSettings] = useState(INITIAL_SETTINGS);
   const [is3D, setIs3D] = useState(true);
   const [isLit, setIsLit] = useState(false);
+  const [isFpsShown, setIsFpsShown] = useState(false);
 
   useEffect(() => {
     fetchCatalog().then(setCatalog, (error: unknown) => {
@@ -78,6 +79,12 @@ export const App = () => {
     setIsLit(next);
   };
 
+  const onFpsChange = (next: boolean) => {
+    if (!viewer) return;
+    setFramesPerSecond(viewer, next);
+    setIsFpsShown(next);
+  };
+
   const onFile = (file: File) => {
     file.text().then(
       (text) => setCatalog(parseTleCatalog(text)),
@@ -107,6 +114,8 @@ export const App = () => {
         onModeChange={onModeChange}
         isLit={isLit}
         onLightingChange={onLightingChange}
+        isFpsShown={isFpsShown}
+        onFpsChange={onFpsChange}
         onFile={onFile}
         stats={stats}
       />
