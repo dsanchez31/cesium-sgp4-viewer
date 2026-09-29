@@ -79,7 +79,7 @@ export class ShardSampler {
       if (counts[j]! > 0) positions.set(track.samples!, offsets[j]! * 3);
     });
 
-    return { type: 'sampled', requestId, offsets, counts, firstMs, stepMs, positions, rings: null };
+    return { type: 'sampled', requestId, offsets, counts, firstMs, stepMs, positions };
   }
 
   rings(epochMs: number): RingBuffers {

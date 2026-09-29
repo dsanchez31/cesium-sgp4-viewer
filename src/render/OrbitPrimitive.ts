@@ -40,7 +40,9 @@ export interface RingBatch {
 }
 
 interface GpuBatch {
-  source: RingBatch;
+  /** What index rebuilds read. The vertices live on the GPU only. */
+  source: Pick<RingBatch, 'start' | 'groups'> &
+    Pick<RingBuffers, 'indices' | 'indexStart' | 'indexCount'>;
   vertexBuffer: GpuBuffer;
   vertexArray: Destroyable | undefined;
   /** Per colour group, where its segments sit in the current index buffer. */
@@ -167,16 +169,20 @@ export class OrbitPrimitive {
   private prepare(context: unknown, internals: CesiumInternals): void {
     if (this.buffersDirty) {
       this.releaseBuffers();
-      this.gpu = this.batches.map((source) => {
+      this.gpu = this.batches.map(({ rings, start, groups }) => {
         const vertexBuffer = internals.Buffer.createVertexBuffer({
           context,
-          typedArray: source.rings.vertices,
+          typedArray: rings.vertices,
           usage: internals.BufferUsage.STATIC_DRAW,
         });
         // Kept across index rebuilds: destroyed here, never by a vertex array.
         vertexBuffer.vertexArrayDestroyable = false;
+        const { indices, indexStart, indexCount } = rings;
+        const source = { start, groups, indices, indexStart, indexCount };
         return { source, vertexBuffer, vertexArray: undefined, ranges: [] };
       });
+      // Uploaded: the vertices, most of the rings' memory, can be collected.
+      this.batches = [];
       this.buffersDirty = false;
       this.indicesDirty = true;
     }
@@ -191,12 +197,12 @@ export class OrbitPrimitive {
 
   /** Gathers the visible satellites' index ranges, one colour group after another. */
   private rebuildIndices(batch: GpuBatch, context: unknown, internals: CesiumInternals): void {
-    const { rings, start, groups } = batch.source;
+    const { start, groups, indexStart, indexCount } = batch.source;
     const { visible } = this;
     const isVisible = (j: number) => visible === null || visible[start + j] !== 0;
 
     let total = 0;
-    for (let j = 0; j < groups.length; j++) if (isVisible(j)) total += rings.indexCount[j]!;
+    for (let j = 0; j < groups.length; j++) if (isVisible(j)) total += indexCount[j]!;
     const indices = new Uint32Array(Math.max(total, 2));
 
     batch.ranges = this.colors.map(() => ({ offset: 0, count: 0 }));
@@ -206,9 +212,9 @@ export class OrbitPrimitive {
       range.offset = cursor;
       for (let j = 0; j < groups.length; j++) {
         if (groups[j] !== group || !isVisible(j)) continue;
-        const from = rings.indexStart[j]!;
-        const count = rings.indexCount[j]!;
-        indices.set(rings.indices.subarray(from, from + count), cursor);
+        const from = indexStart[j]!;
+        const count = indexCount[j]!;
+        indices.set(batch.source.indices.subarray(from, from + count), cursor);
         cursor += count;
       }
       range.count = cursor - range.offset;
