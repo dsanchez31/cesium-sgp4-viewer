@@ -1,6 +1,22 @@
 import type { Vector3 } from '../sgp4/propagate.js';
 import { INTERPOLATION_NODES } from './grid.js';
 
+const factorial = (k: number): number => (k <= 1 ? 1 : k * factorial(k - 1));
+
+/**
+ * `1 / ∏(j − m)` over `m ≠ j`: the constant part of the weight of node `j`,
+ * for each node count up to {@link INTERPOLATION_NODES}.
+ */
+const INVERSE_DENOMINATORS = Array.from({ length: INTERPOLATION_NODES + 1 }, (_, n) =>
+  Float64Array.from(
+    { length: n },
+    (_, j) => ((n - 1 - j) % 2 === 0 ? 1 : -1) / (factorial(j) * factorial(n - 1 - j)),
+  ),
+);
+
+/** `∏(t − m)` over `m < j`, for each node `j`. */
+const prefix = new Float64Array(INTERPOLATION_NODES);
+
 /**
  * Evaluates a trajectory sampled on a uniform grid.
  *
@@ -30,18 +46,25 @@ export const interpolateSamples = (
   const first = Math.min(Math.max(Math.floor(u) - (nodes >> 1) + 1, 0), count - nodes);
   const t = u - first;
 
+  // Each weight is `∏(t − m)` over `m ≠ j`, from running products on either
+  // side of `j`, times a constant: no division, and exact on a node.
+  const inverse = INVERSE_DENOMINATORS[nodes]!;
+  for (let j = 0, product = 1; j < nodes; j++) {
+    prefix[j] = product;
+    product *= t - j;
+  }
+
   let x = 0;
   let y = 0;
   let z = 0;
-  let base = (offset + first) * 3;
-  for (let j = 0; j < nodes; j++, base += 3) {
-    let weight = 1;
-    for (let m = 0; m < nodes; m++) {
-      if (m !== j) weight *= (t - m) / (j - m);
-    }
+  let suffix = 1;
+  for (let j = nodes - 1; j >= 0; j--) {
+    const weight = prefix[j]! * suffix * inverse[j]!;
+    const base = (offset + first + j) * 3;
     x += weight * samples[base]!;
     y += weight * samples[base + 1]!;
     z += weight * samples[base + 2]!;
+    suffix *= t - j;
   }
 
   if (Number.isNaN(x + y + z)) return null;
