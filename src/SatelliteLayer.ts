@@ -13,7 +13,7 @@ import {
 
 import { Emitter } from './events.js';
 import { ORBIT_REGIMES, type OrbitRegime, regimeCode } from './orbit/regime.js';
-import { OrbitPrimitive, type RingBatch } from './render/OrbitPrimitive.js';
+import { OrbitPrimitive } from './render/OrbitPrimitive.js';
 import { type LabelMode, PointLayer } from './render/PointLayer.js';
 import { SelectionMarker } from './render/SelectionMarker.js';
 import { TrackStore } from './render/TrackStore.js';
@@ -24,7 +24,7 @@ import {
   type SamplingWindowOptions,
 } from './time/SamplingWindow.js';
 import type { Satellite } from './tle/parseCatalog.js';
-import { PropagationPool, type ShardResult } from './worker/pool.js';
+import { PropagationPool, type ShardRings } from './worker/pool.js';
 import { buildRings } from './worker/rings.js';
 
 /** A colour as a Cesium `Color` or any CSS colour string. */
@@ -124,7 +124,8 @@ export class SatelliteLayer {
 
   private settleReady: ((error?: Error) => void) | undefined;
   private window: SamplingWindow | null = null;
-  private inFlight = false;
+  private samplesInFlight = false;
+  private ringsInFlight = false;
   private retryAt = 0;
   private ringEpochMs: number | null = null;
   private selectedRingEpochMs: number | null = null;
@@ -348,25 +349,31 @@ export class SatelliteLayer {
     if (this.labelMode === 'hover') this.points.setHovered(i);
   };
 
-  /** Moves the sampled window and rebuilds the rings when needed, one request at a time. */
+  /**
+   * Moves the sampled window and rebuilds the rings when needed, one request of
+   * each kind at a time. They are separate requests so that the points, which
+   * matter most, never wait for the rings, which cost several times more.
+   */
   private requestSamples(ms: number): void {
-    if (this.inFlight || performance.now() < this.retryAt) return;
-    const moveWindow = this.window === null || this.window.needsMove(ms);
-    const rebuildRings = this.showOrbits && ringsNeedRebuild(this.ringEpochMs, ms);
-    if (!moveWindow && !rebuildRings) return;
+    if (performance.now() < this.retryAt) return;
+    if (!this.samplesInFlight && (this.window === null || this.window.needsMove(ms))) {
+      this.moveWindow(ms);
+    }
+    if (!this.ringsInFlight && this.showOrbits && ringsNeedRebuild(this.ringEpochMs, ms)) {
+      this.rebuildRings(ms);
+    }
+  }
 
-    const window = moveWindow ? SamplingWindow.around(ms, this.windowOptions) : this.window!;
-    const ringEpochMs = rebuildRings ? ms : null;
-    this.inFlight = true;
-
-    this.pool.sample(window.startMs, window.stopMs, ringEpochMs).then(
+  private moveWindow(ms: number): void {
+    const window = SamplingWindow.around(ms, this.windowOptions);
+    this.samplesInFlight = true;
+    this.pool.sample(window.startMs, window.stopMs).then(
       (results) => {
         if (this.destroyed) return;
-        this.inFlight = false;
+        this.samplesInFlight = false;
         this.window = window;
         this.tracks.update(results);
         this.points.invalidate();
-        if (ringEpochMs !== null) this.setRings(results, ringEpochMs);
 
         const failed = this.tracks.failedCount();
         this.events.emit('update', {
@@ -380,26 +387,42 @@ export class SatelliteLayer {
       },
       (reason: unknown) => {
         if (this.destroyed) return;
-        this.inFlight = false;
-        this.retryAt = performance.now() + RETRY_DELAY_MS;
-        const error = reason instanceof Error ? reason : new Error(String(reason));
-        this.events.emit('error', error);
-        this.settleReady?.(error);
-        this.settleReady = undefined;
+        this.samplesInFlight = false;
+        this.fail(reason);
       },
     );
   }
 
-  private setRings(results: readonly ShardResult[], epochMs: number): void {
-    const batches: RingBatch[] = [];
-    for (const { rings, shard } of results) {
-      if (!rings) continue;
-      batches.push({
-        rings,
-        start: shard.start,
-        groups: this.regimeCodes.subarray(shard.start, shard.start + shard.size),
-      });
-    }
+  private rebuildRings(epochMs: number): void {
+    this.ringsInFlight = true;
+    this.pool.rings(epochMs).then(
+      (results) => {
+        if (this.destroyed) return;
+        this.ringsInFlight = false;
+        this.setRings(results, epochMs);
+      },
+      (reason: unknown) => {
+        if (this.destroyed) return;
+        this.ringsInFlight = false;
+        this.fail(reason);
+      },
+    );
+  }
+
+  private fail(reason: unknown): void {
+    this.retryAt = performance.now() + RETRY_DELAY_MS;
+    const error = reason instanceof Error ? reason : new Error(String(reason));
+    this.events.emit('error', error);
+    this.settleReady?.(error);
+    this.settleReady = undefined;
+  }
+
+  private setRings(results: readonly ShardRings[], epochMs: number): void {
+    const batches = results.map(({ rings, shard }) => ({
+      rings,
+      start: shard.start,
+      groups: this.regimeCodes.subarray(shard.start, shard.start + shard.size),
+    }));
     this.ringEpochMs = epochMs;
     this.orbitPrimitive.setBatches(batches, epochMs);
     this.orbitPrimitive.setVisibility(this.filtersActive() ? this.visible : null);

@@ -17,11 +17,16 @@ export interface SampleMessage {
   requestId: number;
   startMs: number;
   stopMs: number;
-  /** Rebuild the rings around this instant, or keep the previous ones with `null`. */
-  ringEpochMs: number | null;
 }
 
-export type ToWorker = LoadMessage | SampleMessage;
+/** Rebuild the rings around `epochMs`. */
+export interface RingsMessage {
+  type: 'rings';
+  requestId: number;
+  epochMs: number;
+}
+
+export type ToWorker = LoadMessage | SampleMessage | RingsMessage;
 
 /**
  * One revolution of every orbit of a shard, as `LINES`, ready for the GPU.
@@ -60,7 +65,12 @@ export interface SampleResult {
   firstMs: Float64Array<ArrayBuffer>;
   stepMs: Float64Array<ArrayBuffer>;
   positions: Float32Array<ArrayBuffer>;
-  rings: RingBuffers | null;
+}
+
+export interface RingsResult {
+  type: 'rings';
+  requestId: number;
+  rings: RingBuffers;
 }
 
 export interface WorkerFailure {
@@ -69,20 +79,14 @@ export interface WorkerFailure {
   message: string;
 }
 
-export type FromWorker = SampleResult | WorkerFailure;
+export type FromWorker = SampleResult | RingsResult | WorkerFailure;
 
 /** Every buffer of a result, for the transfer list of `postMessage`. */
-export const transferablesOf = (result: SampleResult): Transferable[] => {
-  const buffers: Transferable[] = [
-    result.offsets.buffer,
-    result.counts.buffer,
-    result.firstMs.buffer,
-    result.stepMs.buffer,
-    result.positions.buffer,
-  ];
-  if (result.rings) {
+export const transferablesOf = (result: SampleResult | RingsResult): Transferable[] => {
+  if (result.type === 'rings') {
     const { vertices, indices, indexStart, indexCount } = result.rings;
-    buffers.push(vertices.buffer, indices.buffer, indexStart.buffer, indexCount.buffer);
+    return [vertices.buffer, indices.buffer, indexStart.buffer, indexCount.buffer];
   }
-  return buffers;
+  const { offsets, counts, firstMs, stepMs, positions } = result;
+  return [offsets.buffer, counts.buffer, firstMs.buffer, stepMs.buffer, positions.buffer];
 };

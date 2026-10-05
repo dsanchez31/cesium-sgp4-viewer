@@ -1,5 +1,5 @@
 import PropagationWorker from './propagation.worker?worker&inline';
-import type { FromWorker, SampleResult, ToWorker } from './protocol.js';
+import type { FromWorker, RingBuffers, RingsResult, SampleResult, ToWorker } from './protocol.js';
 
 /** A contiguous slice of the catalog, owned by one worker. */
 export interface Shard {
@@ -12,8 +12,15 @@ export interface ShardResult extends SampleResult {
   shard: Shard;
 }
 
+export interface ShardRings {
+  rings: RingBuffers;
+  shard: Shard;
+}
+
+type Answer = SampleResult | RingsResult;
+
 interface Pending {
-  resolve: (result: SampleResult) => void;
+  resolve: (answer: Answer) => void;
   reject: (error: Error) => void;
 }
 
@@ -58,26 +65,28 @@ export class PropagationPool {
     this.shards = shards;
   }
 
-  /** Samples every shard over the window, and rebuilds the rings when `ringEpochMs` is given. */
-  async sample(
-    startMs: number,
-    stopMs: number,
-    ringEpochMs: number | null,
-  ): Promise<ShardResult[]> {
-    if (this.destroyed) throw new Error('the propagation pool was destroyed');
-
-    const results = await Promise.all(
-      this.workers.map(
-        (worker) =>
-          new Promise<SampleResult>((resolve, reject) => {
-            const requestId = this.nextRequestId++;
-            this.pending.set(requestId, { resolve, reject });
-            const message: ToWorker = { type: 'sample', requestId, startMs, stopMs, ringEpochMs };
-            worker.postMessage(message);
-          }),
-      ),
-    );
+  /** Samples every shard over the window. */
+  async sample(startMs: number, stopMs: number): Promise<ShardResult[]> {
+    const results = await this.broadcast<SampleResult>((requestId) => ({
+      type: 'sample',
+      requestId,
+      startMs,
+      stopMs,
+    }));
     return results.map((result, s) => ({ ...result, shard: this.shards[s]! }));
+  }
+
+  /**
+   * Rebuilds every shard's rings around `epochMs`. A worker answers in order:
+   * a window move requested before this one is not held up by it.
+   */
+  async rings(epochMs: number): Promise<ShardRings[]> {
+    const results = await this.broadcast<RingsResult>((requestId) => ({
+      type: 'rings',
+      requestId,
+      epochMs,
+    }));
+    return results.map(({ rings }, s) => ({ rings, shard: this.shards[s]! }));
   }
 
   destroy(): void {
@@ -86,8 +95,23 @@ export class PropagationPool {
     this.failAll(new Error('the propagation pool was destroyed'));
   }
 
+  /** Sends a request to every worker; each answers with the type the request asks for. */
+  private broadcast<A extends Answer>(message: (requestId: number) => ToWorker): Promise<A[]> {
+    if (this.destroyed) return Promise.reject(new Error('the propagation pool was destroyed'));
+    return Promise.all(
+      this.workers.map(
+        (worker) =>
+          new Promise<A>((resolve, reject) => {
+            const requestId = this.nextRequestId++;
+            this.pending.set(requestId, { resolve: resolve as (answer: Answer) => void, reject });
+            worker.postMessage(message(requestId));
+          }),
+      ),
+    );
+  }
+
   private settle(message: FromWorker): void {
-    if (message.type === 'sampled') {
+    if (message.type !== 'error') {
       this.pending.get(message.requestId)?.resolve(message);
       this.pending.delete(message.requestId);
       return;
