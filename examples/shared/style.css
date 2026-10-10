@@ -6,6 +6,8 @@
   --text: #e2e8f0;
   --muted: #94a3b8;
   --accent: #bef264;
+  /* Bottom edge of the toolbar, kept current by `trackToolbarHeight`. */
+  --toolbar-bottom: 64px;
   font:
     13px/1.4 system-ui,
     -apple-system,
@@ -159,9 +161,9 @@ input[type='search'] {
   padding: 0 7px;
 }
 
-/* Cesium's frame rate overlay, moved off the toolbar and the details panel. */
+/* Cesium's frame rate overlay, moved under the toolbar and off the details panel. */
 #globe .cesium-performanceDisplay-defaultContainer {
-  top: 76px;
+  top: calc(var(--toolbar-bottom) + 12px);
   left: 12px;
   right: auto;
   text-align: left;
