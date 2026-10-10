@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/dsanchez31/cesium-sgp4-viewer/compare/v0.2.0...v0.2.1) (2026-10-10)
+
+
+### Bug Fixes
+
+* **examples:** keep the FPS overlay under the wrapped toolbar on mobile ([#22](https://github.com/dsanchez31/cesium-sgp4-viewer/issues/22)) ([b0f44a2](https://github.com/dsanchez31/cesium-sgp4-viewer/commit/b0f44a2e6cd108d1c39b8efbc095ce47cf1b965a))
+
 ## [0.2.0](https://github.com/dsanchez31/cesium-sgp4-viewer/compare/v0.1.0...v0.2.0) (2026-09-29)
 
 
