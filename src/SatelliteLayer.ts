@@ -172,11 +172,11 @@ export class SatelliteLayer {
         regimeColors.map((color) => color.withAlpha(orbitOpacity)),
         DRAW_ORDER,
       ),
-    ) as OrbitPrimitive;
+    );
     this.orbitPrimitive.show = this.showOrbits;
     this.selectedOrbit = this.scene.primitives.add(
       new OrbitPrimitive([toColor(options.selectedOrbitColor ?? '#f8fafc')], [0]),
-    ) as OrbitPrimitive;
+    );
 
     this.points = new PointLayer(
       this.scene,
