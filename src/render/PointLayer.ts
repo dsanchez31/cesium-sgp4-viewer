@@ -112,9 +112,7 @@ export class PointLayer {
     this.disposeLabels();
     this.mode = mode;
     if (mode !== 'none') {
-      this.labels = this.scene.primitives.add(
-        new LabelCollection({ scene: this.scene }),
-      );
+      this.labels = this.scene.primitives.add(new LabelCollection({ scene: this.scene }));
     }
     if (mode === 'all') this.syncAllLabels();
     if (mode === 'hover') {

@@ -62,9 +62,7 @@ export class SelectionMarker {
 
   constructor(scene: Scene, style: SelectionMarkerStyle) {
     this.scene = scene;
-    this.collection = scene.primitives.add(
-      new BillboardCollection({ scene }),
-    );
+    this.collection = scene.primitives.add(new BillboardCollection({ scene }));
     const common = {
       image: ringImage(style.color, style.sizePixels),
       width: style.sizePixels,
