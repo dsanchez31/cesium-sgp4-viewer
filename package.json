@@ -1,6 +1,6 @@
 {
   "name": "@dsanchez31/cesium-sgp4-viewer",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Plot tens of thousands of satellites and their orbits on a CesiumJS globe, propagated with SGP4 from TLEs in web workers, orbits drawn by custom vertex and fragment shaders.",
   "keywords": [
     "cesium",
