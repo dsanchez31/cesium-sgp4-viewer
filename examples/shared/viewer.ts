@@ -66,6 +66,25 @@ export const setLighting = (viewer: Viewer, isLit: boolean): void => {
   viewer.scene.requestRender();
 };
 
+/**
+ * Publishes the bottom edge of the `.toolbar` panel as `--toolbar-bottom`: the
+ * toolbar wraps onto several rows on narrow screens, so what sits under it
+ * cannot rely on a fixed offset. Returns the function that stops tracking.
+ */
+export const trackToolbarHeight = (): (() => void) => {
+  const toolbar = document.querySelector<HTMLElement>('.toolbar');
+  if (!toolbar) return () => {};
+  const root = document.documentElement;
+  const observer = new ResizeObserver(() => {
+    root.style.setProperty('--toolbar-bottom', `${toolbar.offsetTop + toolbar.offsetHeight}px`);
+  });
+  observer.observe(toolbar);
+  return () => {
+    observer.disconnect();
+    root.style.removeProperty('--toolbar-bottom');
+  };
+};
+
 /** Shows or hides Cesium's frame rate overlay. */
 export const setFramesPerSecond = (viewer: Viewer, isShown: boolean): void => {
   viewer.scene.debugShowFramesPerSecond = isShown;

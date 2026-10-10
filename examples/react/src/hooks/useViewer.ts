@@ -2,7 +2,7 @@ import { enableInertialCamera } from '@dsanchez31/cesium-sgp4-viewer';
 import type { Viewer } from 'cesium';
 import { useCallback, useState } from 'react';
 
-import { createViewer } from '../../../shared/viewer';
+import { createViewer, trackToolbarHeight } from '../../../shared/viewer';
 
 /**
  * Creates a Cesium viewer in the element the returned ref is attached to, and
@@ -16,8 +16,10 @@ export const useViewer = () => {
     if (!container) return;
     const created = createViewer(container);
     const releaseCamera = enableInertialCamera(created.scene);
+    const releaseToolbar = trackToolbarHeight();
     setViewer(created);
     return () => {
+      releaseToolbar();
       releaseCamera();
       created.destroy();
       setViewer(null);

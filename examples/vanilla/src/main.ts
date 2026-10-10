@@ -11,7 +11,12 @@ import { Cartographic } from 'cesium';
 
 import { onClockTick, readClock, scrubTo } from '../../shared/clock';
 import { searchPredicate } from '../../shared/format';
-import { createViewer, setFramesPerSecond, setLighting } from '../../shared/viewer';
+import {
+  createViewer,
+  setFramesPerSecond,
+  setLighting,
+  trackToolbarHeight,
+} from '../../shared/viewer';
 import { mountDetails } from './ui/details';
 import { byId } from './ui/dom';
 import { mountRegimes } from './ui/regimes';
@@ -19,6 +24,7 @@ import { mountTimeline } from './ui/timeline';
 import { mountTransport } from './ui/transport';
 
 const viewer = createViewer(byId('globe', HTMLDivElement));
+trackToolbarHeight();
 // The Earth turns under a camera fixed in space, as seen from orbit.
 enableInertialCamera(viewer.scene);
 
