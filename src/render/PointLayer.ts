@@ -86,7 +86,7 @@ export class PointLayer {
     // reads as a density rather than a flat disc.
     this.collection = scene.primitives.add(
       new PointPrimitiveCollection({ blendOption: BlendOption.TRANSLUCENT }),
-    ) as PointPrimitiveCollection;
+    );
     this.points = satellites.map((satellite, i) =>
       this.collection.add({
         id: i,
@@ -114,7 +114,7 @@ export class PointLayer {
     if (mode !== 'none') {
       this.labels = this.scene.primitives.add(
         new LabelCollection({ scene: this.scene }),
-      ) as LabelCollection;
+      );
     }
     if (mode === 'all') this.syncAllLabels();
     if (mode === 'hover') {

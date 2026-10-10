@@ -64,7 +64,7 @@ export class SelectionMarker {
     this.scene = scene;
     this.collection = scene.primitives.add(
       new BillboardCollection({ scene }),
-    ) as BillboardCollection;
+    );
     const common = {
       image: ringImage(style.color, style.sizePixels),
       width: style.sizePixels,
