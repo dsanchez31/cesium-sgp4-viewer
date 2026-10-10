@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>cesium-sgp4-viewer: render benchmark</title>
+  </head>
+  <body>
+    <div id="globe"></div>
+
+    <header class="panel toolbar">
+      <label class="select">
+        Satellites
+        <select id="count">
+          <option value="16000" selected>16,000</option>
+          <option value="50000">50,000</option>
+          <option value="100000">100,000</option>
+          <option value="250000">250,000</option>
+        </select>
+      </label>
+      <label class="select">
+        Points
+        <select id="points">
+          <option value="legacy" selected>PointPrimitiveCollection</option>
+          <option value="buffer">BufferPointCollection</option>
+        </select>
+      </label>
+      <label class="select">
+        Orbits
+        <select id="orbits">
+          <option value="off" selected>Off</option>
+          <option value="legacy">OrbitPrimitive</option>
+          <option value="buffer">BufferPolylineCollection</option>
+        </select>
+      </label>
+      <button id="run" type="button">Run</button>
+      <button id="matrix" type="button">Run matrix</button>
+      <button id="copy" type="button">Copy JSON</button>
+      <output id="status" class="stats">Idle</output>
+    </header>
+
+    <aside class="panel details">
+      <table id="results">
+        <thead>
+          <tr>
+            <th>N</th>
+            <th>Points</th>
+            <th>Orbits</th>
+            <th>Update ms (mean / p95)</th>
+            <th>Frame CPU ms (mean / p95)</th>
+            <th>FPS</th>
+            <th>Heap MB</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </aside>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
