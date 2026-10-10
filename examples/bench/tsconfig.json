@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"],
+    "paths": {
+      "@dsanchez31/cesium-sgp4-viewer": ["../../src/index.ts"]
+    },
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src", "../shared", "vite.config.ts"]
+}

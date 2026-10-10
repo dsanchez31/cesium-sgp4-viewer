@@ -15,7 +15,7 @@ import {
 } from 'cesium';
 
 import type { Satellite } from '../tle/parseCatalog.js';
-import type { TrackStore } from './TrackStore.js';
+import type { PositionSource } from './PositionSource.js';
 
 export interface PointStyle {
   /** Point diameter in pixels. */
@@ -57,7 +57,7 @@ const scratch = new Cartesian3();
 export class PointLayer {
   private readonly scene: Scene;
   private readonly satellites: readonly Satellite[];
-  private readonly tracks: TrackStore;
+  private readonly tracks: PositionSource;
   private readonly labelOptions: LabelOptions;
   private readonly collection: PointPrimitiveCollection;
   private readonly points: PointPrimitive[];
@@ -74,7 +74,7 @@ export class PointLayer {
   constructor(
     scene: Scene,
     satellites: readonly Satellite[],
-    tracks: TrackStore,
+    tracks: PositionSource,
     style: PointStyle,
     labelOptions: LabelOptions,
   ) {

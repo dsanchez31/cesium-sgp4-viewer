@@ -1,0 +1,25 @@
+.details {
+  top: auto;
+  bottom: 12px;
+  width: auto;
+  left: 12px;
+  max-height: 45vh;
+  overflow: auto;
+}
+
+table {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+th,
+td {
+  padding: 2px 10px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+th {
+  color: var(--muted);
+  font-weight: normal;
+}
